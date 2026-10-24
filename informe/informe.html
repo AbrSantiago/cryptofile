@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>TP2 — Criptografía — Informe</title>
+<style>
+  @page { size: A4; margin: 16mm 17mm; }
+  :root { --ink:#141b24; --muted:#5b6774; --line:#d9dee4; --teal:#0e9e85; --code:#f3f5f7; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif; color: var(--ink); font-size: 10pt; line-height: 1.45; margin: 0; }
+  h1 { font-size: 22pt; margin: 0 0 2mm; letter-spacing: -.01em; }
+  h2 { font-size: 13.5pt; margin: 7mm 0 3mm; padding-bottom: 1.5mm; border-bottom: 1.5px solid var(--ink); break-after: avoid; }
+  h3 { font-size: 11pt; margin: 5mm 0 1.5mm; break-after: avoid; }
+  p { margin: 0 0 2.5mm; }
+  ul, ol { margin: 0 0 3mm; padding-left: 6mm; }
+  li { margin-bottom: 1mm; }
+  code, pre, .mono { font-family: "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace; font-size: 8.8pt; }
+  code { background: var(--code); padding: 0 1mm; border-radius: 1mm; }
+  pre { background: #0b1118; color: #cfe3e0; padding: 3.5mm 4mm; border-radius: 2mm; white-space: pre-wrap; word-break: break-all; margin: 0 0 3mm; break-inside: avoid; line-height: 1.45; }
+  pre .c { color: #6c8191; } pre .p { color: #19e6c1; }
+  table { width: 100%; border-collapse: collapse; margin: 1mm 0 4mm; break-inside: avoid; }
+  th, td { text-align: left; vertical-align: top; padding: 1.2mm 2mm; border-bottom: 1px solid var(--line); }
+  th { font-size: 8.5pt; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+  .head { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 3px solid var(--ink); padding-bottom: 4mm; margin-bottom: 4mm; }
+  .kicker { font-size: 8.5pt; letter-spacing: .18em; text-transform: uppercase; color: var(--teal); font-weight: 600; margin-bottom: 2mm; }
+  .meta { font-size: 9pt; color: var(--muted); text-align: right; line-height: 1.6; }
+  .lead { font-size: 10.5pt; color: #33404d; }
+  .flow { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; margin: 2mm 0 3mm; }
+  .box { border: 1px solid var(--line); border-radius: 2mm; padding: 3mm 4mm; break-inside: avoid; }
+  .box h3 { margin-top: 0; }
+  .box ol { margin-bottom: 0; }
+  .note { border-left: 3px solid var(--teal); background: #f1faf8; padding: 2.5mm 4mm; margin: 2mm 0 4mm; break-inside: avoid; }
+  figure { margin: 2mm 0 4mm; break-inside: avoid; }
+  figure img { width: 100%; border-radius: 2mm; border: 1px solid var(--line); display: block; }
+  figcaption { font-size: 8.5pt; color: var(--muted); margin-top: 1.5mm; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; }
+  .ok { color: var(--teal); font-weight: 600; }
+  .pb { break-before: page; }
+</style>
+</head>
+<body>
+
+<div class="head">
+  <div>
+    <div class="kicker">Seguridad Informática · UNQ · Trabajo práctico 2</div>
+    <h1>CryptoFile: cifrado de archivos con AES-256</h1>
+  </div>
+  <div class="meta">
+    Integrantes: <b>[completar]</b><br>
+    Octubre 2026
+  </div>
+</div>
+
+<p class="lead">CryptoFile cifra cualquier archivo con <b>AES-256-GCM</b>. La clave se deriva de una contraseña con
+<b>Argon2id</b> y una sal aleatoria, y el resultado se descifra a un archivo idéntico byte a byte. Se usa
+desde la línea de comandos (<code>cli.py</code>) o desde una interfaz web hecha con Streamlit (<code>app.py</code>).
+Las dos usan el mismo núcleo criptográfico (<code>cryptofile/core.py</code>), que se apoya en la librería
+<code>cryptography</code> de Python. No se implementa AES desde cero.</p>
+
+<h2>1. Funcionamiento del código</h2>
+
+<h3>Estructura</h3>
+<table>
+  <tr><th style="width:30%">Archivo</th><th>Responsabilidad</th></tr>
+  <tr><td class="mono">cryptofile/core.py</td><td>Formato del archivo cifrado, derivación de clave, <code>encrypt()</code> y <code>decrypt()</code>, errores (<code>AuthenticationError</code>, <code>InvalidFormatError</code>).</td></tr>
+  <tr><td class="mono">cli.py</td><td>Comandos <code>encrypt</code>, <code>decrypt</code> y <code>sha256</code>. Pide la contraseña sin mostrarla y nunca sobrescribe archivos sin <code>--force</code>.</td></tr>
+  <tr><td class="mono">app.py, i18n.py</td><td>Interfaz web (Streamlit) en español e inglés. Procesa todo en memoria y ofrece el resultado como descarga.</td></tr>
+  <tr><td class="mono">tests/</td><td>25 pruebas automáticas con <code>pytest</code>: ida y vuelta, contraseña incorrecta, archivo alterado, sal/IV distintos y formato.</td></tr>
+</table>
+
+<div class="flow">
+  <div class="box">
+    <h3>Flujo de cifrado</h3>
+    <ol>
+      <li>Leer el archivo y la contraseña.</li>
+      <li>Generar con <code>os.urandom</code> (CSPRNG del sistema operativo) una <b>sal de 16 bytes</b> y un <b>nonce de 12 bytes</b>.</li>
+      <li>Derivar la clave de 32 bytes: <code>Argon2id(contraseña, sal, t=3, m=64 MiB, p=4)</code>.</li>
+      <li>Armar el encabezado de 43 bytes (magic, versión, parámetros de Argon2id, sal y nonce).</li>
+      <li>Cifrar <code>nombre original + contenido</code> con AES-256-GCM. El encabezado se pasa como dato asociado (AAD).</li>
+      <li>Escribir <code>encabezado ‖ texto cifrado ‖ tag (16 bytes)</code>.</li>
+    </ol>
+  </div>
+  <div class="box">
+    <h3>Flujo de descifrado</h3>
+    <ol>
+      <li>Leer el encabezado y validarlo: magic, versión y parámetros dentro de rango.</li>
+      <li>Re-derivar la clave con la contraseña ingresada y la sal y los parámetros guardados.</li>
+      <li>Descifrar con AES-256-GCM, que verifica el tag sobre el encabezado y el texto cifrado.</li>
+      <li>Si el tag no coincide, informar el error y <b>no escribir nada</b>.</li>
+      <li>Si coincide, recuperar el nombre original y escribir el archivo descifrado.</li>
+    </ol>
+  </div>
+</div>
+
+<h2>2. Decisiones de diseño</h2>
+
+<h3>Modo de operación: AES-256-GCM</h3>
+<p>Elegimos GCM y no CBC+HMAC porque es un modo de <b>cifrado autenticado</b> (AEAD): en una sola operación,
+con una sola clave, da confidencialidad e integridad. Con CBC+HMAC hay que derivar dos claves, aplicar
+padding y respetar el orden encrypt-then-MAC con una comparación en tiempo constante. Cada uno de esos pasos
+es un punto donde se puede cometer un error. GCM no usa padding, así que el texto cifrado mide lo mismo que
+el original. El encabezado entra como AAD: no se cifra, pero queda autenticado, y alterar cualquier parámetro,
+la sal o el nonce invalida el tag. ECB queda descartado porque cifra igual los bloques iguales y deja ver
+patrones del archivo.</p>
+
+<h3>Derivación de la clave: Argon2id</h3>
+<p>La contraseña nunca se usa directo como clave: pasa por <b>Argon2id</b>, el ganador de la Password Hashing
+Competition y la opción recomendada por la RFC 9106 y por OWASP. Además de lento es <i>memory-hard</i>:
+cada intento obliga a reservar 64 MiB, y eso encarece mucho un ataque de fuerza bruta con GPU o ASIC frente
+a PBKDF2. Usamos la segunda configuración recomendada por la RFC 9106 (t=3, m=64 MiB, p=4). Tarda una
+fracción de segundo por operación y entra en la memoria de un servidor gratuito. La <b>sal</b> es aleatoria
+y distinta en cada cifrado: dos archivos con la misma contraseña quedan con claves diferentes y no sirven
+tablas precomputadas.</p>
+<p>Los parámetros se guardan en el encabezado, así se pueden endurecer en el futuro sin perder la capacidad
+de descifrar archivos viejos. Al leer un archivo se acotan (memoria ≤ 1 GiB, t ≤ 10, p ≤ 16), para que un
+archivo manipulado no fuerce a reservar recursos desmedidos antes de llegar a verificar el tag.</p>
+
+<h3>IV / nonce</h3>
+<p>El nonce de GCM es de 96 bits, el tamaño estándar, y se genera aleatoriamente en cada cifrado. En GCM es
+crítico no repetir nunca un par (clave, nonce). Acá además cada cifrado usa una clave distinta, porque la sal
+es nueva, así que una repetición es prácticamente imposible.</p>
+
+<h3>Formato del archivo cifrado (<code>.cryf</code>)</h3>
+<table>
+  <tr><th style="width:14%">Bytes</th><th style="width:26%">Campo</th><th>Ejemplo real (documento_secreto.pdf.cryf)</th></tr>
+  <tr><td>0–3</td><td>Magic <code>CRYF</code></td><td class="mono">43 52 59 46</td></tr>
+  <tr><td>4</td><td>Versión del formato</td><td class="mono">01</td></tr>
+  <tr><td>5</td><td>KDF (1 = Argon2id)</td><td class="mono">01</td></tr>
+  <tr><td>6–9</td><td>Iteraciones (t)</td><td class="mono">00 00 00 03</td></tr>
+  <tr><td>10–13</td><td>Memoria en KiB (m)</td><td class="mono">00 01 00 00 &nbsp;(65 536 KiB = 64 MiB)</td></tr>
+  <tr><td>14</td><td>Paralelismo (p)</td><td class="mono">04</td></tr>
+  <tr><td>15–30</td><td>Sal (16 bytes)</td><td class="mono">6c 13 4e 8b 56 c5 b6 f3 ef 4d 95 44 35 c2 0a 83</td></tr>
+  <tr><td>31–42</td><td>Nonce (12 bytes)</td><td class="mono">98 78 ec ef cd e6 d9 50 37 bf 0e 96</td></tr>
+  <tr><td>43–…</td><td>Texto cifrado + tag</td><td>1791 bytes = 2 + 21 (nombre) + 1752 (contenido) + 16 (tag)</td></tr>
+</table>
+<p>El archivo trae todo lo necesario para descifrarlo salvo la contraseña. También cifra el <b>nombre
+original</b>, así el descifrado lo restaura y el nombre no queda expuesto. El costo total es de 43 + 2 +
+largo del nombre + 16 bytes.</p>
+
+<h3>Errores</h3>
+<p>GCM no puede distinguir una contraseña incorrecta de un archivo modificado: en los dos casos el tag no
+verifica. Por eso el programa informa un único error, “la contraseña es incorrecta o el archivo fue
+modificado”, y <b>no genera archivo de salida</b>. El descifrado se hace completo en memoria y solo se
+escribe si la verificación fue exitosa, así que nunca se entrega texto plano sin autenticar. Los archivos
+que no son de CryptoFile, o que están truncados o tienen parámetros fuera de rango, se rechazan con un
+mensaje específico antes de derivar la clave.</p>
+
+<div class="note"><b>Limitación conocida.</b> El archivo se procesa entero en memoria. Es la forma más simple
+de garantizar que no se escriba nada sin verificar, y alcanza para el uso previsto. La interfaz web acepta
+archivos de hasta 100 MB.</div>
+
+<h2>3. Prueba</h2>
+<p>Ciclo completo con un PDF, comparando el SHA-256 del original con el del descifrado. También se prueba una
+contraseña incorrecta y un archivo con un solo bit modificado:</p>
+<pre><span class="p">$</span> python cli.py encrypt documento_secreto.pdf
+Cifrado OK -> documento_secreto.pdf.cryf (1834 bytes)
+<span class="p">$</span> python cli.py decrypt documento_secreto.pdf.cryf -o documento_descifrado.pdf
+Descifrado OK -> documento_descifrado.pdf (1752 bytes)
+<span class="p">$</span> python cli.py sha256 documento_secreto.pdf documento_descifrado.pdf
+bb53f8ed9094d50ccf0f5314fff8ef5e05d58ef6a4c7bff0fa75d5665359516c  documento_secreto.pdf
+bb53f8ed9094d50ccf0f5314fff8ef5e05d58ef6a4c7bff0fa75d5665359516c  documento_descifrado.pdf
+Los hashes COINCIDEN.
+<span class="p">$</span> python cli.py decrypt documento_secreto.pdf.cryf -o x.pdf      <span class="c"># contraseña incorrecta</span>
+Error: No se pudo descifrar: la contraseña es incorrecta o el archivo fue modificado.
+<span class="c">(código de salida 1 — x.pdf no se creó)</span>
+<span class="p">$</span> python cli.py decrypt alterado.cryf -o y.pdf                 <span class="c"># 1 bit modificado en el byte 100</span>
+Error: No se pudo descifrar: la contraseña es incorrecta o el archivo fue modificado.
+<span class="c">(código de salida 1 — y.pdf no se creó)</span></pre>
+
+<p>Los <b>hashes SHA-256 coinciden</b>: el archivo descifrado es idéntico al original. Las pruebas
+automáticas (<code>python -m pytest</code>, <span class="ok">25 passed</span>) verifican además:</p>
+<ul>
+  <li>ida y vuelta byte a byte con archivos de 0, 1, 15, 16, 17, 1024 y ~1 MB;</li>
+  <li>que dos cifrados del mismo archivo con la misma contraseña usen sal y nonce distintos;</li>
+  <li>que la modificación de cualquier región (parámetros, sal, nonce, texto cifrado o tag) se detecte;</li>
+  <li>que la CLI no cree el archivo de salida ante contraseña incorrecta o archivo alterado.</li>
+</ul>
+
+<div class="two">
+  <figure><img src="captura_cifrado.jpg" alt="Interfaz web tras cifrar">
+    <figcaption>Interfaz web después de cifrar: SHA-256 del original y parámetros del encabezado.</figcaption></figure>
+  <figure><img src="captura_error.jpg" alt="Interfaz web con contraseña incorrecta">
+    <figcaption>Descifrado con contraseña incorrecta: se informa el error y no se ofrece salida.</figcaption></figure>
+</div>
+
+<h2>Anexo: ejecución</h2>
+
+<h3>Requisitos</h3>
+<p><a href="https://docs.astral.sh/uv/">uv</a> (recomendado) o Python 3.11 o superior con pip. Dependencias (<code>requirements.txt</code>): <code>cryptography ≥ 44</code>,
+que incluye Argon2id, y <code>streamlit</code>, solo para la interfaz web.</p>
+
+<h3>Instalación</h3>
+<p>Con <b>uv</b> no hace falta instalar nada a mano: <code>uv run</code> lee <code>pyproject.toml</code> y
+<code>uv.lock</code>, y crea el entorno virtual con las versiones exactas la primera vez:</p>
+<pre>uv run streamlit run app.py
+uv run cli.py encrypt documento.pdf
+uv run pytest</pre>
+<p>Alternativa con pip:</p>
+<pre><span class="c"># Windows (PowerShell)</span>
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+
+<span class="c"># Linux / macOS</span>
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt</pre>
+
+<h3>Línea de comandos</h3>
+<pre><span class="c"># Cifrar (pide la contraseña dos veces, sin mostrarla) → genera documento.pdf.cryf</span>
+python cli.py encrypt documento.pdf
+
+<span class="c"># Descifrar → restaura el nombre original, o el indicado con -o</span>
+python cli.py decrypt documento.pdf.cryf -o documento_descifrado.pdf
+
+<span class="c"># Comparar hashes</span>
+python cli.py sha256 documento.pdf documento_descifrado.pdf
+
+<span class="c"># Ayuda</span>
+python cli.py --help</pre>
+
+<h3>Interfaz web</h3>
+<pre>streamlit run app.py          <span class="c"># abre http://localhost:8501</span></pre>
+<p>Arrastrar un archivo a la zona de carga, escribir la contraseña (Enter para aplicarla) y presionar
+<b>CIFRAR</b> o <b>DESCIFRAR</b>. El botón de descifrar solo se habilita si el archivo tiene el formato de
+CryptoFile. El resultado se baja con <b>DESCARGAR</b>, junto con su SHA-256. El selector ES/EN cambia el
+idioma.</p>
+
+<h3>Pruebas automáticas</h3>
+<pre>pip install -r requirements-dev.txt
+python -m pytest</pre>
+</body>
+</html>

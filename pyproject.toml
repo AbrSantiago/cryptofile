@@ -1,0 +1,16 @@
+[project]
+name = "cryptofile"
+version = "1.0.0"
+description = "TP2 Seguridad Informática (UNQ): cifrado de archivos con AES-256-GCM y Argon2id"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "cryptography>=44.0",
+    "streamlit==1.66.1",
+]
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[tool.uv]
+package = false
