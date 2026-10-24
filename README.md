@@ -4,6 +4,18 @@ Cifra y descifra archivos con **AES-256-GCM**. La clave se deriva de la contrase
 (t=3, m=64 MiB, p=4) y una sal aleatoria de 16 bytes. Se usa por línea de comandos o con una
 interfaz web en Streamlit.
 
+**Demo online:** <https://cryptofile.streamlit.app/>
+
+## Integrantes
+
+| Integrante | GitHub |
+|---|---|
+| Abregú, Santiago | [@AbrSantiago](https://github.com/AbrSantiago) |
+| Futryk, Fabricio | [@ffutryk](https://github.com/ffutryk) |
+| Viazzo, Lucía | [@luciaviazzo](https://github.com/luciaviazzo) |
+
+## Estructura
+
 ```
 cryptofile/core.py   núcleo criptográfico y formato .cryf
 cli.py               línea de comandos (encrypt / decrypt / sha256)
@@ -41,18 +53,13 @@ python -m pytest
 
 ## Deploy en Streamlit Community Cloud
 
-1. Subir el proyecto a un repositorio de GitHub (público o privado).
+La app está publicada en **<https://cryptofile.streamlit.app/>** y se redeploya sola con cada push a la rama
+configurada.
+
+Para repetir el deploy:
+
+1. Tener el proyecto en un repositorio de GitHub sobre el que tengas permisos de **administrador**. Si el repo
+   es de otra persona, hacé un fork; después, para traer los cambios nuevos, usá **Sync fork** en GitHub.
 2. En <https://share.streamlit.io> → **Create app** → elegir el repo, la rama y `app.py` como *main file*.
-3. En **Advanced settings**, elegir Python 3.12 (o 3.11+). Las dependencias se instalan desde `requirements.txt`.
+3. En **Advanced settings**, elegir Python 3.12 (o 3.11+). Las dependencias se instalan desde `uv.lock`/`requirements.txt`.
 4. **Deploy**. La configuración visual y el límite de subida (100 MB) están en `.streamlit/config.toml`.
-
-## Informe
-
-`informe/informe.pdf` se genera desde `informe/informe.html`. Para editarlo (por ejemplo, para completar
-los integrantes), abrí el HTML en Chrome o Edge → Imprimir → Guardar como PDF, con márgenes
-"predeterminados" y "Gráficos de fondo" activado.
-
-## Entrega
-
-ZIP con el código, `requirements.txt` y el informe en PDF, llamado
-`TP2_Apellido1-Apellido2-Apellido3_MesAño.zip` (por ejemplo, `TP2_Gomez-Fernandez-Ruiz_Octubre2026.zip`).
