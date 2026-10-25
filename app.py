@@ -12,7 +12,7 @@ import math
 import streamlit as st
 
 from cryptofile import core
-from i18n import STRINGS, core_error
+from i18n import STRENGTH, STRINGS, core_error
 
 st.set_page_config(page_title="CryptoFile", page_icon="🔐", layout="wide",
                    initial_sidebar_state="collapsed")
@@ -26,17 +26,19 @@ ss.setdefault("status", None)   # (nivel, clave_i18n, kwargs) del último evento
 ss.setdefault("file_id", None)
 
 
-def t(key: str, **kwargs) -> str:
-    text = STRINGS[ss.lang][key]
+def t(key: str, **kwargs: object) -> str:
+    lang: str = ss.lang
+    text = STRINGS[lang][key]
     return text.format(**kwargs) if kwargs else text
 
 
 def human_size(n: int) -> str:
-    for unit in ("B", "KB", "MB", "GB"):
-        if n < 1024 or unit == "GB":
-            return f"{n:.0f} {unit}" if unit == "B" else f"{n:.1f} {unit}".replace(".0 ", " ")
-        n /= 1024
-    return f"{n} B"
+    size = float(n)
+    for unit in ("B", "KB", "MB"):
+        if size < 1024:
+            return f"{size:.0f} {unit}" if unit == "B" else f"{size:.1f} {unit}".replace(".0 ", " ")
+        size /= 1024
+    return f"{size:.1f} GB".replace(".0 ", " ")
 
 
 def password_score(pw: str) -> int:
@@ -308,7 +310,7 @@ def meter(score: int) -> str:
     color = ["#1d2836", "#ff3b5c", "#ffb020", "#19e6c1", "#19e6c1"][score]
     bars = "".join(f'<span style="background:{color if i < score else "#1d2836"}"></span>' for i in range(4))
     return (f'<div class="cf-meter">{bars}</div>'
-            f'<div class="cf-meter-label" style="color:{color}">{t("strength")[score]}</div>')
+            f'<div class="cf-meter-label" style="color:{color}">{STRENGTH[ss.lang][score]}</div>')
 
 
 def header_info(h: core.Header) -> str:
@@ -382,14 +384,16 @@ with st.container(key="window"):
         uploaded = st.file_uploader(t("drop_label"), type=None, accept_multiple_files=False,
                                     label_visibility="collapsed", key="uploader")
 
-        file_bytes = uploaded.getvalue() if uploaded else None
-        file_is_cryf = bool(file_bytes) and core.is_encrypted(file_bytes)
+        # Sin archivo, file_bytes queda vacío: así siempre es `bytes` y nunca None.
+        file_bytes: bytes = uploaded.getvalue() if uploaded else b""
+        file_name: str = uploaded.name if uploaded else ""
+        file_is_cryf = core.is_encrypted(file_bytes)
         current_id = uploaded.file_id if uploaded else None
         if current_id != ss.file_id:  # archivo nuevo: se descarta el resultado anterior
             ss.file_id, ss.result, ss.status = current_id, None, None
 
         if uploaded:
-            st.markdown(file_card(uploaded.name, len(file_bytes), file_is_cryf), unsafe_allow_html=True)
+            st.markdown(file_card(file_name, len(file_bytes), file_is_cryf), unsafe_allow_html=True)
 
         st.markdown(f'<div class="cf-label">{t("password")}</div>', unsafe_allow_html=True)
         password = st.text_input(t("password"), type="password", placeholder=t("password_ph"),
@@ -404,10 +408,10 @@ with st.container(key="window"):
 
         if enc_clicked:
             with st.spinner(t("status_encrypting")):
-                do_encrypt(file_bytes, uploaded.name, password)
+                do_encrypt(file_bytes, file_name, password)
         if dec_clicked:
             with st.spinner(t("status_decrypting")):
-                do_decrypt(file_bytes, uploaded.name, password)
+                do_decrypt(file_bytes, file_name, password)
 
         r = ss.result
         if r:

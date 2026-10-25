@@ -21,7 +21,7 @@ cryptofile/core.py   núcleo criptográfico y formato .cryf
 cli.py               línea de comandos (encrypt / decrypt / sha256)
 app.py, i18n.py      interfaz web (Streamlit, ES/EN)
 tests/               pruebas automáticas (pytest)
-informe/             informe (HTML fuente + PDF)
+informe/             informe en PDF
 ```
 
 ## Con uv (recomendado)

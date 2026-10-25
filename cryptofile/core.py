@@ -107,7 +107,7 @@ class Header:
         )
 
     @classmethod
-    def from_bytes(cls, data: bytes) -> "Header":
+    def from_bytes(cls, data: bytes) -> Header:
         if len(data) < MIN_FILE_LEN:
             raise InvalidFormatError("El archivo es demasiado corto para ser un archivo cifrado.")
         magic, version, kdf_id, t, m, p = struct.unpack(_HEADER_FMT, data[:_PARAMS_LEN])

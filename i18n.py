@@ -1,6 +1,6 @@
 """Textos de la interfaz en español e inglés."""
 
-STRINGS = {
+STRINGS: dict[str, dict[str, str]] = {
     "es": {
         "drop_title": "SOLTÁ TU ARCHIVO ACÁ",
         "drop_sub": "o hacé clic para buscarlo",
@@ -13,7 +13,6 @@ STRINGS = {
         "download": "DESCARGAR",
         "tag_plain": "SIN CIFRAR",
         "tag_cryf": "CIFRADO · CRYPTOFILE",
-        "strength": ["", "DÉBIL", "ACEPTABLE", "BUENA", "FUERTE"],
         "feat_aes": "AES-256-GCM",
         "feat_kdf": "Argon2id KDF",
         "feat_rand": "IV/sal aleatorios",
@@ -46,7 +45,6 @@ STRINGS = {
         "download": "DOWNLOAD",
         "tag_plain": "PLAINTEXT",
         "tag_cryf": "ENCRYPTED · CRYPTOFILE",
-        "strength": ["", "WEAK", "FAIR", "GOOD", "STRONG"],
         "feat_aes": "AES-256-GCM",
         "feat_kdf": "Argon2id KDF",
         "feat_rand": "Random IV/salt",
@@ -69,8 +67,14 @@ STRINGS = {
     },
 }
 
+# Etiquetas del medidor de fortaleza de la contraseña (índice = puntaje 0–4).
+STRENGTH: dict[str, list[str]] = {
+    "es": ["", "DÉBIL", "ACEPTABLE", "BUENA", "FUERTE"],
+    "en": ["", "WEAK", "FAIR", "GOOD", "STRONG"],
+}
+
 # Mensajes de error del núcleo (en español) traducidos para la interfaz en inglés.
-CORE_ERRORS_EN = {
+CORE_ERRORS_EN: dict[str, str] = {
     "El archivo es demasiado corto para ser un archivo cifrado.": "FILE TOO SHORT TO BE ENCRYPTED",
     "El archivo no fue cifrado con CryptoFile.": "NOT A CRYPTOFILE FILE",
     "Parámetros de Argon2id fuera de rango.": "ARGON2ID PARAMETERS OUT OF RANGE",
