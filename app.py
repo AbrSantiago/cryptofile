@@ -32,12 +32,19 @@ def t(key: str, **kwargs: object) -> str:
     return text.format(**kwargs) if kwargs else text
 
 
+KIB = 1024
+
+# Reglas del medidor: (puntaje, largo mínimo, cantidad mínima de tipos de caracteres).
+STRENGTH_RULES = ((2, 8, 2), (3, 12, 3), (4, 16, 3))
+LONG_PASSWORD = 20  # a partir de este largo se considera fuerte sin importar los tipos
+
+
 def human_size(n: int) -> str:
     size = float(n)
     for unit in ("B", "KB", "MB"):
-        if size < 1024:
+        if size < KIB:
             return f"{size:.0f} {unit}" if unit == "B" else f"{size:.1f} {unit}".replace(".0 ", " ")
-        size /= 1024
+        size /= KIB
     return f"{size:.1f} GB".replace(".0 ", " ")
 
 
@@ -48,11 +55,10 @@ def password_score(pw: str) -> int:
     classes = sum([any(c.islower() for c in pw), any(c.isupper() for c in pw),
                    any(c.isdigit() for c in pw), any(not c.isalnum() for c in pw)])
     score = 1
-    if len(pw) >= 8 and classes >= 2:
-        score = 2
-    if len(pw) >= 12 and classes >= 3:
-        score = 3
-    if len(pw) >= 16 and classes >= 3 or len(pw) >= 20:
+    for level, min_len, min_classes in STRENGTH_RULES:
+        if len(pw) >= min_len and classes >= min_classes:
+            score = level
+    if len(pw) >= LONG_PASSWORD:
         score = 4
     return score
 

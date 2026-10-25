@@ -42,7 +42,7 @@ def test_cifrar_descifrar_y_comparar_hash(tmp_path: Path, monkeypatch: pytest.Mo
     assert "COINCIDEN" in capsys.readouterr().out
 
 
-def test_contraseña_incorrecta_no_genera_salida(tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+def test_contrasena_incorrecta_no_genera_salida(tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
                                                 capsys: pytest.CaptureFixture[str]) -> None:
     original = tmp_path / "a.txt"
     original.write_bytes(b"hola")

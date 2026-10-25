@@ -160,7 +160,7 @@ def _safe_filename(name: str) -> str:
     """
     name = name.replace("\\", "/").replace("\x00", "")
     name = name.rsplit("/", 1)[-1].strip()
-    if len(name) >= 2 and name[1] == ":":  # "C:algo" en Windows es relativo a la unidad C
+    if name[1:2] == ":":  # "C:algo" en Windows es relativo a la unidad C
         name = name[2:]
     return "" if name in ("", ".", "..") else name
 

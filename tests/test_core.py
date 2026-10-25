@@ -51,7 +51,7 @@ def test_formato_contiene_lo_necesario_para_descifrar() -> None:
     assert len(blob) == core.HEADER_LEN + 2 + len("h.txt") + 4 + core.TAG_LEN
 
 
-def test_contraseña_incorrecta() -> None:
+def test_contrasena_incorrecta() -> None:
     blob = core.encrypt(b"secreto", PASSWORD, "s", FAST)
     with pytest.raises(core.AuthenticationError):
         core.decrypt(blob, "otra contraseña")
@@ -94,7 +94,7 @@ def test_parametros_absurdos_en_encabezado_se_rechazan_antes_de_derivar() -> Non
         core.decrypt(bytes(blob), PASSWORD)
 
 
-def test_contraseña_vacia() -> None:
+def test_contrasena_vacia() -> None:
     with pytest.raises(ValueError):
         core.encrypt(b"x", "", "x", FAST)
 
