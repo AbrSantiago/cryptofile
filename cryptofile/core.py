@@ -150,10 +150,25 @@ def _pack_payload(filename: str, data: bytes) -> bytes:
     return struct.pack(">H", len(name)) + name + data
 
 
+def _safe_filename(name: str) -> str:
+    """Deja solo el nombre del archivo, sin ninguna ruta.
+
+    El nombre viene de adentro del archivo cifrado; si alguien armara un .cryf con
+    un nombre como "../../algo" o "C:\\algo", al descifrar se podría escribir fuera
+    de la carpeta elegida. Se aceptan "/" y "\\" como separadores, sin importar el
+    sistema operativo, y se descartan los nombres vacíos, "." y "..".
+    """
+    name = name.replace("\\", "/").replace("\x00", "")
+    name = name.rsplit("/", 1)[-1].strip()
+    if len(name) >= 2 and name[1] == ":":  # "C:algo" en Windows es relativo a la unidad C
+        name = name[2:]
+    return "" if name in ("", ".", "..") else name
+
+
 def _unpack_payload(payload: bytes) -> DecryptedFile:
     (name_len,) = struct.unpack(">H", payload[:2])
     name = payload[2:2 + name_len].decode("utf-8", errors="replace")
-    return DecryptedFile(filename=name, data=payload[2 + name_len:])
+    return DecryptedFile(filename=_safe_filename(name), data=payload[2 + name_len:])
 
 
 def encrypt(data: bytes, password: str, filename: str = "", params: KdfParams | None = None) -> bytes:

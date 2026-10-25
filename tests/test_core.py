@@ -99,3 +99,24 @@ def test_parametros_absurdos_en_encabezado_se_rechazan_antes_de_derivar():
 def test_contraseña_vacia():
     with pytest.raises(ValueError):
         core.encrypt(b"x", "", "x", FAST)
+
+
+@pytest.mark.parametrize("stored, expected", [
+    ("../../evil.txt", "evil.txt"),
+    ("..\\..\\Windows\\evil.dll", "evil.dll"),
+    ("/etc/passwd", "passwd"),
+    ("C:\\Users\\x\\a.pdf", "a.pdf"),
+    ("C:evil.txt", "evil.txt"),
+    ("..", ""),
+    ("", ""),
+])
+def test_nombre_guardado_no_puede_escapar_de_la_carpeta(stored, expected):
+    # Arma un archivo "malicioso" a mano: el nombre se mete en el payload sin pasar por basename.
+    original = core._pack_payload
+    try:
+        core._pack_payload = lambda filename, data: (
+            len(stored.encode()).to_bytes(2, "big") + stored.encode() + data)
+        blob = core.encrypt(b"x", PASSWORD, "ignorado", FAST)
+    finally:
+        core._pack_payload = original
+    assert core.decrypt(blob, PASSWORD).filename == expected

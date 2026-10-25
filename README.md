@@ -50,16 +50,3 @@ python -m pytest
 ```
 
 `requirements.txt` se mantiene para quien no use uv; las dependencias son las mismas que en `pyproject.toml`.
-
-## Deploy en Streamlit Community Cloud
-
-La app está publicada en **<https://cryptofile.streamlit.app/>** y se redeploya sola con cada push a la rama
-configurada.
-
-Para repetir el deploy:
-
-1. Tener el proyecto en un repositorio de GitHub sobre el que tengas permisos de **administrador**. Si el repo
-   es de otra persona, hacé un fork; después, para traer los cambios nuevos, usá **Sync fork** en GitHub.
-2. En <https://share.streamlit.io> → **Create app** → elegir el repo, la rama y `app.py` como *main file*.
-3. En **Advanced settings**, elegir Python 3.12 (o 3.11+). Las dependencias se instalan desde `uv.lock`/`requirements.txt`.
-4. **Deploy**. La configuración visual y el límite de subida (100 MB) están en `.streamlit/config.toml`.
