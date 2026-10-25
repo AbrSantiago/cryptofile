@@ -1,0 +1,59 @@
+name: Keep Streamlit awake
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"   # cada 6 horas (UTC)
+  workflow_dispatch:         # para correrlo a mano desde la pestaña Actions
+
+permissions:
+  contents: read
+
+jobs:
+  wake:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar Playwright
+        run: |
+          pip install playwright
+          playwright install --with-deps chromium
+
+      - name: Visitar la app (y despertarla si está dormida)
+        env:
+          APP_URL: https://cryptofile.streamlit.app/
+        run: |
+          python - <<'EOF'
+          import os, re
+          from playwright.sync_api import sync_playwright
+
+          url = os.environ["APP_URL"]
+          wake_text = re.compile("get this app back up", re.I)
+
+          with sync_playwright() as p:
+              browser = p.chromium.launch()
+              page = browser.new_page()
+              page.goto(url, wait_until="networkidle", timeout=90_000)
+              page.wait_for_timeout(5_000)
+
+              # El botón puede estar en la página o dentro de un iframe
+              clicked = False
+              for frame in page.frames:
+                  btn = frame.get_by_role("button", name=wake_text)
+                  if btn.count():
+                      btn.first.click()
+                      clicked = True
+                      break
+
+              if clicked:
+                  print("Estaba dormida: despertando...")
+                  page.wait_for_timeout(90_000)  # darle tiempo a que arranque
+              else:
+                  print("Ya estaba despierta")
+                  page.wait_for_timeout(15_000)  # mantener la sesión abierta un rato
+
+              browser.close()
+          EOF
